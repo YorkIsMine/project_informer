@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "project-informer"
+version = "0.1.0"
+description = "AI-powered developer assistant that understands your project"
+requires-python = ">=3.10"
+dependencies = [
+    "chromadb>=0.4.0",
+    "click>=8.0",
+    "mcp>=1.2.0",
+]
+
+[project.scripts]
+project-informer = "project_informer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
