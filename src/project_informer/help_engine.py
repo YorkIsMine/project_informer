@@ -4,12 +4,21 @@ import subprocess
 from pathlib import Path
 
 
-def answer_question(question: str, project_path: str) -> str:
-    """Answer a project question using RAG docs + git context.
+def answer_question(question: str, project_path: str, provider: str = "auto") -> str:
+    """Answer a project question using RAG docs + git context + LLM.
 
-    Assembles relevant documentation chunks and git state into a
-    structured response. No LLM API key required.
+    Args:
+        question: The user's question.
+        project_path: Path to the project root.
+        provider: LLM provider - "auto", "ollama", "openai", or "none".
+                  "auto" detects the best available provider.
     """
+    from project_informer.llm import detect_provider, ask_llm
+
+    # Resolve "auto" to the best available provider
+    if provider == "auto":
+        provider = detect_provider()
+
     root = Path(project_path).resolve()
     parts = []
 
@@ -18,7 +27,7 @@ def answer_question(question: str, project_path: str) -> str:
     if doc_section:
         parts.append(doc_section)
 
-    # 2. Gather git context
+    # 2. Gather git context (always include for full picture)
     git_section = _get_git_context(str(root), question)
     if git_section:
         parts.append(git_section)
@@ -31,7 +40,13 @@ def answer_question(question: str, project_path: str) -> str:
             "  project-informer index          -- to index documentation\n"
         )
 
-    return "\n\n".join(parts)
+    context = "\n\n".join(parts)
+
+    # 3. Synthesize answer through LLM if available
+    if provider != "none":
+        return ask_llm(question, context, provider)
+
+    return context
 
 
 def _get_doc_context(question: str, project_path: str) -> str | None:

@@ -8,6 +8,7 @@ AI-powered developer assistant that understands your project through documentati
 - **MCP Server** -- exposes git tools (branch, files, diff, tree) for AI assistants
 - **Auto Doc Generation** -- analyzes project code and generates documentation automatically
 - **`/help` Command** -- answers questions about your project using docs + git context
+- **LLM Integration** -- choose between local (Ollama) or remote (OpenAI) LLM for synthesized answers
 
 ## Quick Start
 
@@ -20,12 +21,40 @@ project-informer generate-docs /path/to/project
 # Index project documentation
 project-informer index /path/to/project
 
-# Ask questions
+# Ask questions (raw context, no LLM)
 project-informer help "What is the project structure?" -p /path/to/project
+
+# Ask with local LLM (Ollama)
+project-informer help "What is the project structure?" -p /path/to/project --llm ollama
+
+# Ask with remote LLM (OpenAI)
+export OPENAI_API_KEY=sk-...
+project-informer help "What is the project structure?" -p /path/to/project --llm openai
+
+# Interactive configuration
+project-informer config
 
 # Start MCP server for AI assistant integration
 project-informer serve --project /path/to/project
 ```
+
+## LLM Providers
+
+| Provider | Type | Setup | Default Model |
+|----------|------|-------|---------------|
+| `none` | -- | Nothing needed | -- |
+| `ollama` | Local | `brew install ollama && ollama pull llama3.2` | `llama3.2` |
+| `openai` | Remote | Set `OPENAI_API_KEY` | `gpt-4o-mini` |
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_PROVIDER` | Default provider (`none`, `ollama`, `openai`) | `none` |
+| `OLLAMA_MODEL` | Ollama model name | `llama3.2` |
+| `OLLAMA_URL` | Ollama server URL | `http://localhost:11434` |
+| `OPENAI_API_KEY` | OpenAI API key | -- |
+| `OPENAI_MODEL` | OpenAI model name | `gpt-4o-mini` |
 
 ## Architecture
 
@@ -35,7 +64,7 @@ The system has three layers:
 
 2. **MCP Layer** -- a Model Context Protocol server exposing git operations as tools. External AI assistants (Claude Desktop, Claude Code) connect to this over stdio.
 
-3. **Help Engine** -- combines RAG results with live git context to answer developer questions. No LLM API key required for basic operation.
+3. **Help Engine** -- combines RAG results with live git context to answer developer questions. Optionally passes context through an LLM (Ollama or OpenAI) for synthesized answers.
 
 ## MCP Integration
 

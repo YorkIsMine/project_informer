@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Informer</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --user-bg: #1c2333;
+    --bot-bg: #161b22;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .status-pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .pill .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+
+  .pill .dot.warn { background: var(--orange); }
+  .pill .dot.off { background: var(--text-muted); }
+
+  /* Main layout */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+
+  .sidebar h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .sidebar label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  .sidebar select,
+  .sidebar input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
+
+  .sidebar select:focus,
+  .sidebar input:focus {
+    border-color: var(--accent);
+  }
+
+  .sidebar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .btn:hover {
+    background: var(--border);
+    border-color: var(--text-muted);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-row .btn { flex: 1; }
+
+  /* Chat area */
+  .chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .message {
+    max-width: 85%;
+    padding: 14px 18px;
+    border-radius: var(--radius);
+    line-height: 1.6;
+    font-size: 14px;
+    position: relative;
+  }
+
+  .message.user {
+    align-self: flex-end;
+    background: var(--user-bg);
+    border: 1px solid var(--border);
+  }
+
+  .message.bot {
+    align-self: flex-start;
+    background: var(--bot-bg);
+    border: 1px solid var(--border);
+  }
+
+  .message.system {
+    align-self: center;
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    max-width: 600px;
+    text-align: center;
+  }
+
+  .message .sender {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .message.bot .content h1,
+  .message.bot .content h2,
+  .message.bot .content h3 {
+    margin-top: 12px;
+    margin-bottom: 6px;
+    color: var(--accent);
+  }
+
+  .message.bot .content h1 { font-size: 18px; }
+  .message.bot .content h2 { font-size: 16px; }
+  .message.bot .content h3 { font-size: 14px; }
+
+  .message.bot .content p { margin-bottom: 8px; }
+
+  .message.bot .content code {
+    background: var(--bg-tertiary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .message.bot .content pre {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+
+  .message.bot .content pre code {
+    background: none;
+    padding: 0;
+  }
+
+  .message.bot .content ul,
+  .message.bot .content ol {
+    padding-left: 20px;
+    margin-bottom: 8px;
+  }
+
+  .message.bot .content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  .message.bot .content th,
+  .message.bot .content td {
+    border: 1px solid var(--border);
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .message.bot .content th {
+    background: var(--bg-tertiary);
+  }
+
+  .message.bot .content blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 12px;
+    color: var(--text-muted);
+    margin: 8px 0;
+  }
+
+  .typing-indicator {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    animation: bounce 1.4s infinite;
+  }
+
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Input area */
+  .chat-input {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+
+  .chat-input textarea {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    outline: none;
+    min-height: 44px;
+    max-height: 150px;
+    line-height: 1.5;
+  }
+
+  .chat-input textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .chat-input textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  .send-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .send-btn:hover { background: var(--accent-hover); }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Welcome */
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+    color: var(--text-muted);
+    flex: 1;
+  }
+
+  .welcome h2 {
+    color: var(--text);
+    font-size: 22px;
+  }
+
+  .welcome p {
+    max-width: 500px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .quick-questions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: center;
+  }
+
+  .quick-questions button {
+    padding: 8px 14px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .quick-questions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 13px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; }
+  .toast.success { border-color: var(--green); }
+  .toast.error { border-color: var(--red); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .message { max-width: 95%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="logo">Project Informer</div>
+    <div class="status-pills">
+      <div class="pill" id="pill-branch">
+        <span class="dot"></span>
+        <span id="branch-name">...</span>
+      </div>
+      <div class="pill" id="pill-chunks">
+        <span id="chunks-count">0</span> chunks
+      </div>
+      <div class="pill" id="pill-provider">
+        <span class="dot off" id="provider-dot"></span>
+        <span id="provider-name">none</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-group">
+      <h3>Project</h3>
+      <label>Path</label>
+      <input type="text" id="project-path" placeholder="/path/to/project">
+    </div>
+
+    <div class="sidebar-group">
+      <h3>LLM Provider</h3>
+      <select id="llm-provider">
+        <option value="auto">Auto-detect</option>
+        <option value="ollama">Ollama (local)</option>
+        <option value="openai">OpenAI (remote)</option>
+        <option value="none">None (raw context)</option>
+      </select>
+      <div id="provider-status" style="font-size:12px;color:var(--text-muted);margin-top:4px;"></div>
+    </div>
+
+    <div class="sidebar-group">
+      <h3>Actions</h3>
+      <div class="btn-row">
+        <button class="btn" id="btn-generate" onclick="generateDocs()">Generate Docs</button>
+        <button class="btn" id="btn-index" onclick="indexDocs()">Index</button>
+      </div>
+    </div>
+
+    <div class="sidebar-group">
+      <h3>Quick Questions</h3>
+      <button class="btn" onclick="askQuick('What is the project structure?')">Project structure</button>
+      <button class="btn" onclick="askQuick('How does the architecture work?')">Architecture</button>
+      <button class="btn" onclick="askQuick('What are the main components?')">Main components</button>
+      <button class="btn" onclick="askQuick('What has changed recently?')">Recent changes</button>
+    </div>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-messages" id="chat-messages">
+      <div class="welcome" id="welcome">
+        <h2>Ask anything about your project</h2>
+        <p>
+          Project Informer uses RAG documentation search and git context to answer your questions.
+          Choose an LLM provider in the sidebar for synthesized answers.
+        </p>
+        <div class="quick-questions">
+          <button onclick="askQuick('What is the project structure?')">Project structure</button>
+          <button onclick="askQuick('How does the architecture work?')">Architecture</button>
+          <button onclick="askQuick('What files are in the project?')">File list</button>
+          <button onclick="askQuick('What has changed recently?')">Recent changes</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="chat-input">
+      <textarea
+        id="question-input"
+        placeholder="Ask a question about your project..."
+        rows="1"
+        onkeydown="handleKeyDown(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()">&#8593;</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const chatMessages = document.getElementById('chat-messages');
+  const questionInput = document.getElementById('question-input');
+  const sendBtn = document.getElementById('send-btn');
+  const welcome = document.getElementById('welcome');
+  let isLoading = false;
+
+  // Init
+  loadStatus();
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+  }
+
+  async function sendMessage() {
+    const question = questionInput.value.trim();
+    if (!question || isLoading) return;
+
+    if (welcome) welcome.remove();
+
+    addMessage(question, 'user');
+    questionInput.value = '';
+    questionInput.style.height = 'auto';
+
+    isLoading = true;
+    sendBtn.disabled = true;
+    const loadingEl = addLoading();
+
+    try {
+      const provider = document.getElementById('llm-provider').value;
+      const projectPath = document.getElementById('project-path').value || undefined;
+
+      const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, provider, project_path: projectPath }),
+      });
+
+      const data = await res.json();
+      loadingEl.remove();
+      addMessage(data.answer, 'bot');
+    } catch (err) {
+      loadingEl.remove();
+      addMessage(`Error: ${err.message}`, 'bot');
+    }
+
+    isLoading = false;
+    sendBtn.disabled = false;
+    questionInput.focus();
+  }
+
+  function formatRawContext(text) {
+    // Convert raw context format to markdown
+    // == Section == -> ## Section
+    text = text.replace(/^== (.+?) ==$/gm, '## $1');
+    // [Source: file, Section: heading] -> > **file** - heading
+    text = text.replace(/^\[Source: (.+?), Section: (.+?)\]$/gm, '> **$1** \u2014 *$2*');
+    // Wrap tree-like output (lines with \u251c\u2500\u2500 \u2514\u2500\u2500 \u2502) in code block
+    const lines = text.split('\n');
+    let inTree = false;
+    const result = [];
+    for (const line of lines) {
+      const isTreeLine = /[├└│──┬─\u251c\u2514\u2502\u2500\u2510\u250c]/.test(line) || (inTree && /^\s{2,}\S/.test(line));
+      if (isTreeLine && !inTree) {
+        inTree = true;
+        result.push('```');
+      } else if (!isTreeLine && inTree && line.trim() !== '') {
+        inTree = false;
+        result.push('```');
+      }
+      result.push(line);
+    }
+    if (inTree) result.push('```');
+    return result.join('\n');
+  }
+
+  function addMessage(text, role) {
+    const msg = document.createElement('div');
+    msg.className = `message ${role}`;
+
+    const sender = document.createElement('div');
+    sender.className = 'sender';
+    sender.textContent = role === 'user' ? 'You' : 'Project Informer';
+    msg.appendChild(sender);
+
+    const content = document.createElement('div');
+    content.className = 'content';
+
+    if (role === 'bot') {
+      content.innerHTML = marked.parse(formatRawContext(text));
+    } else {
+      content.textContent = text;
+    }
+
+    msg.appendChild(content);
+    chatMessages.appendChild(msg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return msg;
+  }
+
+  function addLoading() {
+    const msg = document.createElement('div');
+    msg.className = 'message bot';
+
+    const sender = document.createElement('div');
+    sender.className = 'sender';
+    sender.textContent = 'Project Informer';
+    msg.appendChild(sender);
+
+    const typing = document.createElement('div');
+    typing.className = 'typing-indicator';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    msg.appendChild(typing);
+
+    chatMessages.appendChild(msg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return msg;
+  }
+
+  function askQuick(question) {
+    questionInput.value = question;
+    sendMessage();
+  }
+
+  async function loadStatus() {
+    try {
+      const [statusRes, provRes] = await Promise.all([
+        fetch('/api/status'),
+        fetch('/api/providers'),
+      ]);
+      const data = await statusRes.json();
+      const prov = await provRes.json();
+
+      document.getElementById('branch-name').textContent = data.branch || 'no git';
+      document.getElementById('chunks-count').textContent = data.indexed_chunks;
+      document.getElementById('provider-name').textContent = data.provider;
+      document.getElementById('project-path').value = data.project_path;
+
+      const dot = document.getElementById('provider-dot');
+      dot.className = 'dot ' + (data.provider !== 'none' ? '' : 'off');
+
+      const branchDot = document.querySelector('#pill-branch .dot');
+      branchDot.className = 'dot ' + (data.branch ? '' : 'warn');
+
+      // Show provider detection status
+      const statusEl = document.getElementById('provider-status');
+      const parts = [];
+      if (prov.ollama_available) {
+        parts.push('Ollama: ' + prov.ollama_models.join(', '));
+      }
+      if (prov.openai_available) parts.push('OpenAI: key set');
+      if (parts.length === 0) parts.push('No LLM available');
+      statusEl.textContent = parts.join(' | ');
+
+    } catch (err) {
+      console.error('Status load failed:', err);
+    }
+  }
+
+  async function generateDocs() {
+    const btn = document.getElementById('btn-generate');
+    btn.disabled = true;
+    btn.textContent = 'Generating...';
+
+    try {
+      const projectPath = document.getElementById('project-path').value || undefined;
+      const res = await fetch('/api/generate-docs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_path: projectPath }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Generated ${data.files.length} doc files`, 'success');
+      } else {
+        showToast(`Error: ${data.error}`, 'error');
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Generate Docs';
+  }
+
+  async function indexDocs() {
+    const btn = document.getElementById('btn-index');
+    btn.disabled = true;
+    btn.textContent = 'Indexing...';
+
+    try {
+      const projectPath = document.getElementById('project-path').value || undefined;
+      const res = await fetch('/api/index', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_path: projectPath }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`Indexed ${data.chunks} chunks`, 'success');
+        loadStatus();
+      } else {
+        showToast(`Error: ${data.error}`, 'error');
+      }
+    } catch (err) {
+      showToast(`Error: ${err.message}`, 'error');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Index';
+  }
+
+  function showToast(text, type = '') {
+    const toast = document.getElementById('toast');
+    toast.textContent = text;
+    toast.className = 'toast show ' + type;
+    setTimeout(() => toast.className = 'toast', 3000);
+  }
+</script>
+</body>
+</html>
