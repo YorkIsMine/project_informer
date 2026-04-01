@@ -93,6 +93,42 @@ def serve(project):
     serve_main()
 
 
+@main.command("review-pr")
+@click.option("--diff-file", type=click.Path(exists=True), help="Path to file with PR diff.")
+@click.option("--files", default="", help="Comma-separated list of changed file paths.")
+@click.option("--project", "-p", default=".", help="Path to the project root.")
+@click.option(
+    "--llm", "provider",
+    type=click.Choice(["auto", "none", "ollama", "openai"], case_sensitive=False),
+    default="auto",
+    help="LLM provider.",
+)
+def review_pr(diff_file, files, project, provider):
+    """AI-powered code review for a pull request.
+
+    Reads a diff (from --diff-file or stdin), queries project docs via RAG,
+    and returns a structured review with bugs, architecture issues, and recommendations.
+    """
+    import sys
+    from project_informer.pr_reviewer import review_pr as do_review
+
+    if diff_file:
+        diff = Path(diff_file).read_text()
+    else:
+        if sys.stdin.isatty():
+            click.echo("Reading diff from stdin (Ctrl+D to finish)...")
+        diff = sys.stdin.read()
+
+    if not diff.strip():
+        click.echo("No diff provided.", err=True)
+        raise SystemExit(1)
+
+    changed_files = [f.strip() for f in files.split(",") if f.strip()]
+
+    result = do_review(diff, changed_files, project, provider)
+    click.echo(result)
+
+
 @main.command()
 def config():
     """Interactively configure LLM provider and API keys.

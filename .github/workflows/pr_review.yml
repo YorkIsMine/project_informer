@@ -1,0 +1,67 @@
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -e .
+
+      - name: Get PR diff
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} > /tmp/pr_diff.txt
+
+      - name: Get changed files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr diff ${{ github.event.pull_request.number }} --name-only > /tmp/changed_files.txt
+
+      - name: Run AI review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_PROVIDER: openai
+        run: |
+          CHANGED=$(paste -sd',' /tmp/changed_files.txt)
+          python -m project_informer.pr_reviewer \
+            --diff-file /tmp/pr_diff.txt \
+            --files "$CHANGED" \
+            --project-path . \
+            --provider openai \
+            > /tmp/review.txt
+
+      - name: Post review comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "## 🤖 AI Code Review"
+            echo ""
+            cat /tmp/review.txt
+            echo ""
+            echo "---"
+            echo "*Automated review by Project Informer*"
+          } > /tmp/comment.txt
+
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body-file /tmp/comment.txt
